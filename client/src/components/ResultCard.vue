@@ -178,7 +178,7 @@ export default {
   methods: {
     asset,
     subjectSearchUrl(subject) {
-      const normalized = subject.replace(/\s*--\s*/g, '--')
+      const normalized = subject.replace(/\s*--\s*/g, '--').replace(/\.+$/, '')
       const encoded = encodeURIComponent(`subjects.value==/string "${normalized}"`)
       return `https://search.catalog.loc.gov/search?option=query&pageNumber=1&query=${encoded}&recordsPerPage=25`
     },

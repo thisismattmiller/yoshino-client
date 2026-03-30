@@ -57,30 +57,46 @@
     <!-- Results -->
     <template v-if="done">
       <section class="recommendations">
-        <h2>LLM Recommended Subjects</h2>
-        <div class="tag-list">
-          <a
-            v-for="s in recommendedSubjects"
-            :key="'rec-' + s"
-            :href="s.includes('--') ? subjectSearchUrl(s) : undefined"
-            :target="s.includes('--') ? '_blank' : undefined"
-            rel="noopener"
-            class="tag recommended"
-            :class="{ clickable: s.includes('--') }"
-          >{{ s }}</a>
+        <h2>Best Recommended Subjects</h2>
+        <div class="subject-list">
+          <div v-for="s in recommendedSubjects" :key="'rec-' + s" class="subject-row">
+            <a
+              :href="s.includes('--') ? subjectSearchUrl(s) : undefined"
+              :target="s.includes('--') ? '_blank' : undefined"
+              rel="noopener"
+              class="tag recommended"
+              :class="{ clickable: s.includes('--') }"
+            >{{ s }}</a>
+            <span v-if="subjectSources[s]" class="subject-source">{{ subjectSources[s] }}</span>
+            <a
+              v-if="subjectSourceMap[s]"
+              :href="'https://lccn.loc.gov/' + subjectSourceMap[s]"
+              target="_blank"
+              rel="noopener"
+              class="source-lccn"
+            >via {{ subjectSourceMap[s] }}</a>
+          </div>
         </div>
 
         <h2>All Collected Subject Headings</h2>
-        <div class="tag-list">
-          <a
-            v-for="s in otherSubjects"
-            :key="'other-' + s"
-            :href="s.includes('--') ? subjectSearchUrl(s) : undefined"
-            :target="s.includes('--') ? '_blank' : undefined"
-            rel="noopener"
-            class="tag"
-            :class="{ clickable: s.includes('--') }"
-          >{{ s }}</a>
+        <div class="subject-list">
+          <div v-for="s in otherSubjects" :key="'other-' + s" class="subject-row">
+            <a
+              :href="s.includes('--') ? subjectSearchUrl(s) : undefined"
+              :target="s.includes('--') ? '_blank' : undefined"
+              rel="noopener"
+              class="tag"
+              :class="{ clickable: s.includes('--') }"
+            >{{ s }}</a>
+            <span v-if="subjectSources[s]" class="subject-source">{{ subjectSources[s] }}</span>
+            <a
+              v-if="subjectSourceMap[s]"
+              :href="'https://lccn.loc.gov/' + subjectSourceMap[s]"
+              target="_blank"
+              rel="noopener"
+              class="source-lccn"
+            >via {{ subjectSourceMap[s] }}</a>
+          </div>
         </div>
 
         <h2 v-if="classifications.length">Classifications</h2>
@@ -130,9 +146,12 @@ export default {
       enrichTotal: 0,
       allSubjects: [],
       recommendedSubjects: [],
+      subjectSourceMap: {},
+      subjectSources: {},
       classifications: [],
       enrichErrors: [],
       classifyPerformance: null,
+      searchResults: [],
     }
   },
 
@@ -152,7 +171,7 @@ export default {
 
   methods: {
     subjectSearchUrl(subject) {
-      const normalized = subject.replace(/\s*--\s*/g, '--')
+      const normalized = subject.replace(/\s*--\s*/g, '--').replace(/\.+$/, '')
       const encoded = encodeURIComponent(`subjects.value==/string "${normalized}"`)
       return `https://search.catalog.loc.gov/search?option=query&pageNumber=1&query=${encoded}&recordsPerPage=25`
     },
@@ -164,8 +183,11 @@ export default {
       this.step = 'classify'
       this.allSubjects = []
       this.recommendedSubjects = []
+      this.subjectSourceMap = {}
+      this.subjectSources = {}
       this.classifications = []
       this.enrichErrors = []
+      this.searchResults = []
       this.enrichProgress = 0
       this.enrichTotal = 0
       this.classifyPerformance = null
@@ -183,9 +205,10 @@ export default {
 
         const classifyResult = await apiCall('classify', params)
         this.classifyPerformance = classifyResult.performance || null
+        this.searchResults = classifyResult.search_results || []
 
         // Extract IDs from results
-        const ids = (classifyResult.search_results || []).map(
+        const ids = this.searchResults.map(
           r => r.metadata?.['001'] || r.lc_001
         ).filter(Boolean)
 
@@ -202,9 +225,31 @@ export default {
           this.enrichProgress++
         })
 
-        this.allSubjects = (enrichResult.unique_subjects || []).map(s => s.label)
+        const uniqueSubjects = enrichResult.unique_subjects || []
+        this.allSubjects = uniqueSubjects.map(s => s.label)
+        const sources = {}
+        for (const s of uniqueSubjects) {
+          if (s.source) sources[s.label] = s.source
+        }
+        this.subjectSources = sources
         this.classifications = enrichResult.unique_classifications || []
         if (enrichResult.errors) this.enrichErrors = Object.keys(enrichResult.errors)
+
+        // Build subject → source LCCN map
+        const srcMap = {}
+        const idToLccn = {}
+        for (const r of this.searchResults) {
+          const id = r.metadata?.['001'] || r.lc_001
+          if (id && r.metadata?.LCCN) idToLccn[id] = r.metadata.LCCN
+        }
+        for (const [id, data] of Object.entries(enrichResult.results || {})) {
+          const lccn = idToLccn[id]
+          if (!lccn) continue
+          for (const subj of (data.subjects || [])) {
+            if (!srcMap[subj]) srcMap[subj] = lccn
+          }
+        }
+        this.subjectSourceMap = srcMap
 
         if (!this.allSubjects.length) {
           this.done = true
@@ -403,6 +448,37 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.subject-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.subject-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.subject-source {
+  font-size: 11px;
+  color: #888;
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.source-lccn {
+  font-size: 11px;
+  color: #0369a1;
+  text-decoration: none;
+}
+
+.source-lccn:hover {
+  text-decoration: underline;
 }
 
 .tag {

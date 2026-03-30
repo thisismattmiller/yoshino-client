@@ -9,6 +9,54 @@
       <span class="nav-sep">|</span>
       <router-link to="/similar" class="nav-link">Find Similar by LCCN</router-link>
     </div>
+
+    <hr class="home-divider" />
+    <section class="intro-section">
+      <div class="intro-video">
+        <video controls preload="metadata" poster="">
+          <source src="" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+      <div class="intro-text">
+        <h2>What is this?</h2>
+        <p>
+          This is an experimental semantic search interface over <strong>20.3 million</strong>
+          Library of Congress bibliographic records, powered by vector embeddings and AI.
+        </p>
+
+        <h3>How it works</h3>
+        <p>Type a natural language query, for example:</p>
+        <ul class="examples">
+          <li>"The history of the Library of Congress"</li>
+          <li>"The development and history of cell phones in south america"</li>
+          <li>"The history of small villages on the border between France and Germany"</li>
+        </ul>
+        <ul>
+          <li>An LLM expands your query into a high quality bibliographic record, it then looks through all 20 million records for the best match to the created expanded record</li>
+          <li>Vector similarity finds the most relevant records across the entire collection</li>
+          <li>An LLM reranks the results based on the original query</li>
+          <li>Filter by LCC class, material type, or literary form (if filtering by book material type)</li>
+        </ul>
+
+        <h3>Tools</h3>
+        <p>The vector database is a tool that can be used in many ways, a few examples here:</p>
+        <ul>
+          <li><strong>Search</strong> — Semantic search across the full catalog</li>
+          <li><strong>Classification Tool</strong> — Suggest LCSH subject headings for a new work</li>
+          <li><strong>Find Similar</strong> — Enter an LCCN to find related records ("show more like this..." features)</li>
+        </ul>
+
+        <h3>Tech Details</h3>
+        <ul>
+          <li>An experiment using data from mid 2025, newer things will not be in the DB, it is not being updated</li>
+          <li>The LC bibliographic data is being enriched before building the vector representation of it, this happens via <a href="https://id.loc.gov" target="_blank" rel="noopener">id.loc.gov</a>, Wikidata, and metadata from the web matching on standard identifiers to enrich the bib record</li>
+          <li>The embeddings are made using AWS's Titan-text-embeddings-v2 model</li>
+          <li>The vector embeddings are stored in an AWS S3 Vector Bucket</li>
+          <li>The expansion, reranking and other tasks like translation are done by Anthropic Haiku 4.5 model</li>
+        </ul>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -121,5 +169,95 @@ export default {
 .nav-sep {
   color: #ddd;
   margin: 0 4px;
+}
+
+.home-divider {
+  width: 200px;
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin-top: 36px;
+}
+
+.intro-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  width: 100%;
+  max-width: 960px;
+  margin-top: 48px;
+  padding: 0 24px 48px;
+}
+
+.intro-video video {
+  width: 100%;
+  border-radius: 12px;
+  background: #f0f0f0;
+  aspect-ratio: 16 / 9;
+}
+
+.intro-text h2 {
+  font-size: 22px;
+  color: #1a1a2e;
+  margin-bottom: 10px;
+}
+
+.intro-text h3 {
+  font-size: 16px;
+  color: #1a1a2e;
+  margin-top: 20px;
+  margin-bottom: 8px;
+}
+
+.intro-text p {
+  font-size: 15px;
+  color: #555;
+  line-height: 1.7;
+  margin-bottom: 6px;
+}
+
+.intro-text a {
+  color: #0369a1;
+  text-decoration: underline;
+}
+
+.intro-text ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.intro-text li {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.6;
+  padding-left: 16px;
+  position: relative;
+}
+
+.intro-text ul.examples {
+  margin-left: 20px;
+  margin-bottom: 10px;
+}
+
+.intro-text ul.examples li {
+  font-style: italic;
+  color: #666;
+}
+
+.intro-text ul.examples li::before {
+  background: #0369a1;
+}
+
+.intro-text li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #c4788a;
 }
 </style>

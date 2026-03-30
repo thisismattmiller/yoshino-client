@@ -5,7 +5,7 @@
       v-model="query"
       class="search-input"
       rows="3"
-      placeholder="Search the Library of Congress..."
+      placeholder="Enter a research question. Describe your query in detailed natural language."
       @keydown.enter.exact.prevent="onSearch"
     ></textarea>
 
