@@ -13,10 +13,11 @@
     <hr class="home-divider" />
     <section class="intro-section">
       <div class="intro-video">
-        <video controls preload="metadata" poster="">
-          <source src="" type="video/mp4" />
+        <video controls preload="metadata">
+          <source src="https://thisismattmiller.s3.us-east-1.amazonaws.com/yoshino.mp4" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
+        <a href="https://thisismattmiller.s3.us-east-1.amazonaws.com/yoshino.mp4" target="_blank" rel="noopener" class="video-link">Open video in new tab</a>
       </div>
       <div class="intro-text">
         <h2>What is this?</h2>
@@ -193,6 +194,19 @@ export default {
   border-radius: 12px;
   background: #f0f0f0;
   aspect-ratio: 16 / 9;
+  border: 1px solid #888;
+}
+
+.video-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #0369a1;
+  text-decoration: none;
+}
+
+.video-link:hover {
+  text-decoration: underline;
 }
 
 .intro-text h2 {
