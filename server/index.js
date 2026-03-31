@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import apiRoutes from './routes/api.js';
 import ratingsRoutes from './routes/ratings.js';
+import adminRoutes from './routes/admin.js';
 import requestLogger from './middleware/logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -16,6 +17,8 @@ app.use(express.json());
 // API routes with logging
 app.use(`${BASE_PATH}api/search`.replace('//', '/'), requestLogger, apiRoutes);
 app.use(`${BASE_PATH}api/ratings`.replace('//', '/'), ratingsRoutes);
+app.use(`${BASE_PATH}admin`.replace('//', '/'), adminRoutes);
+app.use('/admin', adminRoutes); // also mount at /admin for convenience
 
 // Serve built frontend in production
 const clientDist = join(__dirname, '..', 'client', 'dist');
