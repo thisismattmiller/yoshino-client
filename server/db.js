@@ -33,4 +33,10 @@ db.exec(`
   );
 `);
 
+// Migrations
+const columns = db.prepare("PRAGMA table_info(request_log)").all().map(c => c.name);
+if (!columns.includes('token_usage')) {
+  db.exec("ALTER TABLE request_log ADD COLUMN token_usage TEXT");
+}
+
 export default db;

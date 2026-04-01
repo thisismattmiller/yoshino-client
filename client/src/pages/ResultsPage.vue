@@ -5,6 +5,7 @@
       <SearchBox
         :initialQuery="query"
         :initialRaw="raw"
+        :initialFilter="filter"
         :searching="loading"
         @search="onSearch"
       />
@@ -23,14 +24,33 @@
           </button>
         </div>
 
+        <div v-if="mtSuggestion" class="mt-suggestion">
+          Do you want to filter your search to only show <a href="#" @click.prevent="applyMtSuggestion">{{ mtSuggestion.label }}s</a>?
+        </div>
+
         <div v-if="showTech" class="tech-details">
           <div class="tech-section">
             <h3>Performance</h3>
             <PerformanceBar :performance="performance" />
           </div>
           <div v-if="expandedQuery" class="tech-section">
-            <h3>Expanded Query</h3>
-            <pre class="expanded-query-pre">{{ expandedQuery }}</pre>
+            <h3>
+              Expanded Query
+              <button class="eq-edit-btn" @click="editingExpanded = !editingExpanded">
+                {{ editingExpanded ? 'Cancel' : 'Edit' }}
+              </button>
+            </h3>
+            <pre v-if="!editingExpanded" class="expanded-query-pre">{{ expandedQuery }}</pre>
+            <div v-else class="eq-edit-wrap">
+              <textarea
+                v-model="editedExpandedQuery"
+                class="eq-textarea"
+                rows="18"
+              ></textarea>
+              <button class="eq-search-btn" :disabled="loading" @click="reSearchWithExpanded">
+                Re-search with edited query
+              </button>
+            </div>
           </div>
           <div class="tech-section">
             <h3>Raw API Response</h3>
@@ -115,6 +135,19 @@ export default {
       enrichSubjects: [],
       enrichClassifications: [],
       enrichErrors: [],
+      editingExpanded: false,
+      editedExpandedQuery: '',
+      suggestedMT: null,
+      materialTypes: [
+        { code: 'BK', label: 'Book' },
+        { code: 'CF', label: 'Computer File' },
+        { code: 'CR', label: 'Electronic Resource' },
+        { code: 'MP', label: 'Map' },
+        { code: 'MU', label: 'Musical Score' },
+        { code: 'MX', label: 'Mixed Material' },
+        { code: 'SE', label: 'Serial' },
+        { code: 'VM', label: 'Visual Material' },
+      ],
     }
   },
 
@@ -125,6 +158,21 @@ export default {
       try { this.filter = JSON.parse(this.$route.query.filter) } catch {}
     }
     if (this.query) this.doSearch()
+  },
+
+  computed: {
+    mtSuggestion() {
+      if (!this.suggestedMT) return null
+      // Check if the current filter already includes this MT
+      if (this.filter) {
+        const f = this.filter
+        if (f.MT === this.suggestedMT) return null
+        if (f.$and && f.$and.some(c => c.MT === this.suggestedMT)) return null
+      }
+      const mt = this.materialTypes.find(t => t.code === this.suggestedMT)
+      if (!mt) return null
+      return mt
+    },
   },
 
   watch: {
@@ -181,6 +229,64 @@ export default {
         this.rawResponse = data
         this.results = data.results || []
         this.expandedQuery = data.expanded_query || ''
+        this.editedExpandedQuery = this.expandedQuery
+        this.editingExpanded = false
+        this.performance = data.performance || null
+        this.suggestedMT = data.prompt_suggests_material_type || null
+
+        this.fetchCovers()
+        this.fetchEnrichment()
+      } catch (err) {
+        this.error = err.message
+      } finally {
+        this.loading = false
+      }
+    },
+
+    applyMtSuggestion() {
+      const mtCode = this.suggestedMT
+      if (!mtCode) return
+      let newFilter
+      if (!this.filter) {
+        newFilter = { MT: mtCode }
+      } else if (this.filter.$and) {
+        newFilter = { $and: [...this.filter.$and, { MT: mtCode }] }
+      } else {
+        newFilter = { $and: [this.filter, { MT: mtCode }] }
+      }
+      this.filter = newFilter
+      const routeQuery = { q: this.query, raw: this.raw ? '1' : '0' }
+      if (newFilter) routeQuery.filter = JSON.stringify(newFilter)
+      this.$router.replace({ path: '/results', query: routeQuery })
+      this.doSearch()
+    },
+
+    async reSearchWithExpanded() {
+      this.loading = true
+      this.error = null
+      this.results = null
+      this.covers = {}
+      this.rawResponse = null
+      this.enrichSubjects = []
+      this.enrichClassifications = []
+      this.enrichErrors = []
+      this.enrichLoading = false
+
+      try {
+        const params = {
+          query: this.query,
+          top_k: this.topK,
+          raw: this.raw,
+          expanded_query: this.editedExpandedQuery,
+        }
+        if (this.filter) params.filter = this.filter
+
+        const data = await apiCall('search', params)
+        this.rawResponse = data
+        this.results = data.results || []
+        this.expandedQuery = data.expanded_query || this.editedExpandedQuery
+        this.editedExpandedQuery = this.expandedQuery
+        this.editingExpanded = false
         this.performance = data.performance || null
 
         this.fetchCovers()
@@ -335,6 +441,26 @@ export default {
   background: #f0f0f0;
 }
 
+.mt-suggestion {
+  padding: 10px 16px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1e40af;
+}
+
+.mt-suggestion a {
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.mt-suggestion a:hover {
+  color: #1d4ed8;
+}
+
 .tech-details {
   background: #1a1a2e;
   border-radius: 10px;
@@ -350,6 +476,70 @@ export default {
   letter-spacing: 0.8px;
   color: #888;
   margin-bottom: 8px;
+}
+
+.eq-edit-btn {
+  margin-left: 10px;
+  padding: 3px 10px;
+  font-size: 11px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: transparent;
+  color: #aaa;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.eq-edit-btn:hover {
+  background: #333;
+  color: #fff;
+}
+
+.eq-edit-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.eq-textarea {
+  background: #111;
+  color: #e0e0e0;
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  font-family: monospace;
+  border: 1px solid #444;
+  resize: vertical;
+  min-height: 300px;
+}
+
+.eq-textarea:focus {
+  outline: none;
+  border-color: #7c3aed;
+}
+
+.eq-search-btn {
+  align-self: flex-start;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  background: #7c3aed;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.eq-search-btn:hover {
+  background: #6d28d9;
+}
+
+.eq-search-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .expanded-query-pre {

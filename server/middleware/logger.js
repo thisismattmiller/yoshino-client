@@ -1,8 +1,8 @@
 import db from '../db.js';
 
 const insertLog = db.prepare(`
-  INSERT INTO request_log (action, request_body, response_summary, duration_ms, ip, user_agent)
-  VALUES (?, ?, ?, ?, ?, ?)
+  INSERT INTO request_log (action, request_body, response_summary, duration_ms, ip, user_agent, token_usage)
+  VALUES (?, ?, ?, ?, ?, ?, ?)
 `);
 
 export default function requestLogger(req, res, next) {
@@ -19,13 +19,16 @@ export default function requestLogger(req, res, next) {
       if (body?.performance) summary.performance = body.performance;
       if (body?.error) summary.error = body.error;
 
+      const tokenUsage = body?.performance?.tokens || null;
+
       insertLog.run(
         action,
         JSON.stringify(req.body),
         JSON.stringify(summary),
         duration,
         req.ip,
-        req.get('user-agent') || ''
+        req.get('user-agent') || '',
+        tokenUsage ? JSON.stringify(tokenUsage) : null
       );
     } catch (e) {
       console.error('Logger error:', e.message);

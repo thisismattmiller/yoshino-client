@@ -52,17 +52,19 @@ export default {
   props: {
     initialQuery: { type: String, default: '' },
     initialRaw: { type: Boolean, default: false },
+    initialFilter: { type: Object, default: null },
     searching: { type: Boolean, default: false },
   },
 
   data() {
+    const parsed = this.parseFilter(this.initialFilter)
     return {
       query: this.initialQuery,
       raw: this.initialRaw,
       topK: 20,
-      lccFilter: '',
-      typeFilter: '',
-      litFilter: '',
+      lccFilter: parsed.lcc,
+      typeFilter: parsed.mt,
+      litFilter: parsed.lf,
       lccClasses: [
         { code: 'A', label: 'General Works' },
         { code: 'B', label: 'Philosophy, Psychology, Religion' },
@@ -117,6 +119,12 @@ export default {
     typeFilter(val) {
       if (val !== 'BK') this.litFilter = ''
     },
+    initialFilter(val) {
+      const parsed = this.parseFilter(val)
+      this.lccFilter = parsed.lcc
+      this.typeFilter = parsed.mt
+      this.litFilter = parsed.lf
+    },
   },
 
   mounted() {
@@ -124,6 +132,18 @@ export default {
   },
 
   methods: {
+    parseFilter(filter) {
+      const result = { lcc: '', mt: '', lf: '' }
+      if (!filter) return result
+      const conditions = filter.$and ? filter.$and : [filter]
+      for (const c of conditions) {
+        if (c.L1) result.lcc = c.L1
+        if (c.MT) result.mt = c.MT
+        if (c.LF) result.lf = c.LF
+      }
+      return result
+    },
+
     onSearch() {
       const q = this.query.trim()
       if (!q) return
