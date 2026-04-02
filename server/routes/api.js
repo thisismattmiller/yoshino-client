@@ -1,14 +1,25 @@
 import { Router } from 'express';
+import db from '../db.js';
 
 const router = Router();
 const LAMBDA_URL = process.env.LAMBDA_URL;
+const FAIL_SAFE_USAGE_LIMIT = parseInt(process.env.FAIL_SAFE_USAGE_LIMIT || '5000', 10);
 const VALID_ACTIONS = ['search', 'lccn2bibid', 'isbn2covers', 'find_similar', 'enrich', 'classify', 'judge_subjects'];
+
+const countSearches = db.prepare("SELECT COUNT(*) as total FROM request_log WHERE action = 'search'");
 
 router.post('/', async (req, res) => {
   const action = req.query.action || 'search';
 
   if (!VALID_ACTIONS.includes(action)) {
     return res.status(400).json({ error: `Unknown action: ${action}` });
+  }
+
+  if (action === 'search') {
+    const { total } = countSearches.get();
+    if (total >= FAIL_SAFE_USAGE_LIMIT) {
+      return res.status(429).json({ error: 'Error: Usage Limit Fail Safe Triggered, ask Matt to increase the limit' });
+    }
   }
 
   try {

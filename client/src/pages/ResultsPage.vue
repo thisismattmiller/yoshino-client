@@ -169,6 +169,11 @@ export default {
         if (f.MT === this.suggestedMT) return null
         if (f.$and && f.$and.some(c => c.MT === this.suggestedMT)) return null
       }
+      // Don't suggest if every result already has this MT
+      if (this.results && this.results.length > 0) {
+        const allMatch = this.results.every(r => r.metadata?.MT === this.suggestedMT)
+        if (allMatch) return null
+      }
       const mt = this.materialTypes.find(t => t.code === this.suggestedMT)
       if (!mt) return null
       return mt
