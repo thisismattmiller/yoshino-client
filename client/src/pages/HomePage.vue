@@ -37,7 +37,7 @@
           <li>An LLM expands your query into a high quality bibliographic record, it then looks through all 20 million records for the best match to the created expanded record</li>
           <li>Vector similarity finds the most relevant records across the entire collection</li>
           <li>An LLM reranks the results based on the original query</li>
-          <li>Filter by LCC class, material type, or literary form (if filtering by book material type)</li>
+          <li>Filter by LCC class or material type</li>
         </ul>
 
         <h3>Tools</h3>

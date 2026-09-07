@@ -23,7 +23,8 @@
       </option>
     </select>
 
-    <select v-if="typeFilter === 'BK'" v-model="litFilter" class="filter-select">
+    <!-- Literary Form filter hidden for now; re-enable with v-if="typeFilter === 'BK'" -->
+    <select v-if="false" v-model="litFilter" class="filter-select">
       <option value="">Filter by Literary Form</option>
       <option v-for="l in litForms" :key="l.code" :value="l.code">
         {{ l.code }} – {{ l.label }}
