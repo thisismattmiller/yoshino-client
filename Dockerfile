@@ -9,7 +9,7 @@ COPY client/package.json client/package-lock.json ./client/
 RUN cd client && npm ci
 
 COPY client/ client/
-ARG BASE_PATH=/yoshino/
+ARG BASE_PATH=/embd/
 ENV BASE_PATH=$BASE_PATH
 RUN cd client && npx vite build
 
